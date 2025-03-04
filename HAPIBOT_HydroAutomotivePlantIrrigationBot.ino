@@ -68,9 +68,9 @@ void setup() {
     delay(100); 
   }
 
-  int initialMoisture = CalculateAverageMoisture();
-  Serial.print("Initial Moisture Level: ");
-  Serial.print(initialMoisture);
+  int initialSoilMoistureLevel = CalculateAverageMoisture();
+  Serial.print("Initial Soil Moisture Level: ");
+  Serial.print(initialSoilMoistureLevel);
   Serial.println("%");
 }
 
@@ -160,18 +160,18 @@ void CalculateAndPrintIrrigationMetrics() {
   int averageMoistureAfter = CalculateAverageMoisture();
   unsigned long irrigationDuration = (millis() - irrigationStartTime) / 60000; 
 
-  Serial.print("Moisture Readings After Irrigation: ");
+  Serial.print("Initial Soil Moisture Level: ");
   for (int i = 0; i < numReadings; i++) {
     Serial.print(moistureReadings[i]);
     Serial.print(", ");
   }
   Serial.println();
 
-  Serial.print("Average Moisture After Irrigation: ");
+  Serial.print("Average Soil Moisture Level After Irrigation: ");
   Serial.print(averageMoistureAfter);
   Serial.println("%");
 
-  Serial.print("Average Time to Reach ");
+  Serial.print("Average Time To Reach Optimal Moisture Level (Minutes): ");
   Serial.print(moistureThreshold);
   Serial.print("% moisture: ");
   Serial.print(irrigationDuration);
