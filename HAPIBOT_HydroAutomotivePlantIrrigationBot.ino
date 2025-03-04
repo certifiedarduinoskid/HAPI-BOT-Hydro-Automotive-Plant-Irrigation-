@@ -21,10 +21,11 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);
 Servo myServo;
 
 const int numReadings = 10;     
-int moistureReadings[numReadings];  
+int soilMoistureReadings[numReadings];  
 int arrayIndex = 0;              
 unsigned long irrigationStartTime = 0;  
-int moistureThreshold = 85;      
+int soilMoistureThresholds[] = {20, 30, 40};
+int currentThresholdIndex = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -47,10 +48,10 @@ void setup() {
   analogWrite(motorPin3, 127);
   analogWrite(motorPin4, 127); 
 
-  Serial.println("Waiting for RFID tag...");
+  Serial.println("Waiting for RFID tag");
 
   if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial()) {
-    Serial.println("RFID tag detected!");
+    Serial.println("RFID tag detected");
     MoveTowardsRFID(); 
 
     int waterLevel = digitalRead(waterSensorPin);
@@ -59,16 +60,16 @@ void setup() {
 
     CheckPlantAndAdjust(waterLevel); 
   } else {
-    Serial.println("No RFID tag detected.");
+    Serial.println("No RFID tag detected");
   }
 
-  Serial.println("Taking initial soil moisture readings...");
+  Serial.println("Taking initial soil moisture readings");
   for (int i = 0; i < numReadings; i++) {
-    moistureReadings[i] = ReadMoistureLevel();
+    soilMoistureReadings[i] = ReadSoilMoistureLevel();
     delay(100); 
   }
 
-  int initialSoilMoistureLevel = CalculateAverageMoisture();
+  int initialSoilMoistureLevel = CalculateAverageSoilMoisture();
   Serial.print("Initial Soil Moisture Level: ");
   Serial.print(initialSoilMoistureLevel);
   Serial.println("%");
@@ -77,24 +78,30 @@ void setup() {
 void loop() {}
 
 void CheckPlantAndAdjust(int waterLevel) {
-  int currentMoisture = ReadMoistureLevel();
-  Serial.print("Current Moisture Level: ");
-  Serial.print(currentMoisture);
+  int currentSoilMoisture = ReadSoilMoistureLevel();
+  Serial.print("Current Soil Moisture Level: ");
+  Serial.print(currentSoilMoisture);
   Serial.println("%");
 
-  if (currentMoisture < moistureThreshold) {
-    Serial.println("Soil moisture below threshold, starting irrigation...");
+  int currentThreshold = soilMoistureThresholds[currentThresholdIndex];
+
+  if (currentSoilMoisture < currentThreshold) {
+    Serial.print("Soil moisture below ");
+    Serial.print(currentThreshold); 
+    Serial.println("Soil moisture is detected to be at %, starting irrigation");
     irrigationStartTime = millis();
     digitalWrite(RELAY_PIN, HIGH); 
   }
 
   if (digitalRead(RELAY_PIN) == HIGH) {
-    moistureReadings[arrayIndex] = currentMoisture;
+    soilMoistureReadings[arrayIndex] = currentSoilMoisture;
     arrayIndex = (arrayIndex + 1) % numReadings;
 
-    if (currentMoisture >= moistureThreshold) { 
+    if (currentSoilMoisture >= 85 && currentSoilMoisture <= 89) { 
       digitalWrite(RELAY_PIN, LOW); 
       CalculateAndPrintIrrigationMetrics();
+
+      currentThresholdIndex = (currentThresholdIndex + 1) % 3; 
     }
   } 
 }
@@ -113,7 +120,7 @@ void MoveTowardsRFID() {
 
   if (minDistance < RFID_PROXIMITY_THRESHOLD) { 
     StopMotors();
-    Serial.println("Reached RFID tag.");
+    Serial.println("Reached RFID tag");
   } else {
     MoveForward();
   }
@@ -142,37 +149,37 @@ void StopMotors() {
   digitalWrite(motorPin4, LOW);
 }
 
-int ReadMoistureLevel() {
+int ReadSoilMoistureLevel() {
   int sensorValue = analogRead(MOISTURE_SENSOR_PIN); 
-  int moisturePercentage = map(sensorValue, 0, 1023, 100, 0); 
-  return moisturePercentage;
+  int soilMoisturePercentage = map(sensorValue, 0, 1023, 100, 0); 
+  return soilMoisturePercentage;
 }
 
-int CalculateAverageMoisture() {
+int CalculateAverageSoilMoisture() {
   int sum = 0;
   for (int i = 0; i < numReadings; i++) {
-    sum += moistureReadings[i];
+    sum += soilMoistureReadings[i];
   }
   return sum / numReadings;
 }
 
 void CalculateAndPrintIrrigationMetrics() {
-  int averageMoistureAfter = CalculateAverageMoisture();
+  int averageSoilMoistureAfter = CalculateAverageSoilMoisture();
   unsigned long irrigationDuration = (millis() - irrigationStartTime) / 60000; 
 
   Serial.print("Initial Soil Moisture Level: ");
   for (int i = 0; i < numReadings; i++) {
-    Serial.print(moistureReadings[i]);
+    Serial.print(soilMoistureReadings[i]);
     Serial.print(", ");
   }
   Serial.println();
 
   Serial.print("Average Soil Moisture Level After Irrigation: ");
-  Serial.print(averageMoistureAfter);
+  Serial.print(averageSoilMoistureAfter);
   Serial.println("%");
 
   Serial.print("Average Time To Reach Optimal Moisture Level (Minutes): ");
-  Serial.print(moistureThreshold);
+  Serial.print(soilMoistureThresholds[currentThresholdIndex]);
   Serial.print("% moisture: ");
   Serial.print(irrigationDuration);
   Serial.println(" minutes"); 
