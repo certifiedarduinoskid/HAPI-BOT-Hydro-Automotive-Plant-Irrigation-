@@ -164,7 +164,7 @@ int CalculateAverageMoisture() {
 }
 
 void CalculateAndPrintIrrigationMetrics() {
-  int averageSoilMoistureAfter = CalculateAverageMoisture();
+  int averageMoistureAfter = CalculateAverageMoisture();
   unsigned long irrigationDuration = (millis() - irrigationStartTime) / 60000; 
 
   Serial.print("Initial Moisture Level: ");
